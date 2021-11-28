@@ -11,12 +11,14 @@
 #define BUF_SIZE 4096
 
 typedef enum { AMDREAD, AMDWRITE, ARMPROCESS, FINISHED } LIB;
+
 typedef struct {
   int buf_pos;
   int buf_end;
   int frame_size;
   int size;
 } get_samples_data;
+
 typedef struct {
   int len;
 } write_samples_data;
@@ -144,9 +146,11 @@ int main(int argc, char **argv) {
   // (with the frame_size variable)
   while (shared_mqa_struct->turn == ARMPROCESS) {
   }
-  // printf("received control 1, with frame_size %d\n",
-  // shared_mqa_struct->get_samples_var.frame_size);
 
+  // Main decoding loop.
+  // The decoder calls "AMDREAD," or get_samples multiple times, and then,
+  // when it's ready, it calls "AMDWRITE," which is why we have to have
+  // granular control over which thing the decoder wants.
   while (true) {
     switch (shared_mqa_struct->turn) {
     case ARMPROCESS:

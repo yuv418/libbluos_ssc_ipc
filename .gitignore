@@ -1,4 +1,6 @@
 *.flac
 shm_server
 *.o
-
+/mqa-files/arm
+/mqa-files/x86_64
+qemu*.core
