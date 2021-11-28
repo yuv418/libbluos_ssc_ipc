@@ -1,0 +1,4 @@
+*.flac
+shm_server
+*.o
+
