@@ -1,3 +1,4 @@
+// TODO don't hardcode anything
 #include <portaudio.h>
 #include <sndfile.h>
 #include <stdbool.h>
@@ -66,7 +67,7 @@ void play_audio(ipc_mqa_struct *mqa_s, SNDFILE *outfile) {
   // printf("audio ret %d\n", ret);
 }
 
-int main() {
+int main(int argc, char **argv) {
   int shmid;
   ipc_mqa_struct *shared_mqa_struct;
 
@@ -85,7 +86,7 @@ int main() {
   // Open the sound file we will be working with
   // TODO we might end up wanting a different input, and that's fine.
   memset(&in_file_info, 0, sizeof(in_file_info));
-  in_file = sf_open("***REMOVED***.flac", SFM_READ, &in_file_info);
+  in_file = sf_open(argv[1], SFM_READ, &in_file_info);
 
   // in_file is NULL if sf_open fails
   if (!in_file) {
@@ -93,12 +94,12 @@ int main() {
     return 1;
   }
 
-  // Set up outfile
+  // Set up outfile TODO don't hardcode
   out_file_info.samplerate = 192000; // infmt.samplerate << rs;
   out_file_info.channels = in_file_info.channels;
   out_file_info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_24;
 
-  out_file = sf_open("***REMOVED***-192khz.flac", SFM_WRITE, &out_file_info);
+  out_file = sf_open(argv[2], SFM_WRITE, &out_file_info);
   if (!out_file) {
     // printf("sf_open (out) failed!\n");
     return 1;
