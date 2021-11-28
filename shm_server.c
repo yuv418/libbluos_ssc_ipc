@@ -31,6 +31,9 @@ typedef struct {
 } ipc_mqa_struct;
 
 // Copied from the ARM version
+// Code from Mans Rullgard:
+// https://code.videolan.org/mansr/mqa/-/blob/master/mqadec.c How do I "cite"
+// this? Hmm...
 void get_samples(SNDFILE *in_file, ipc_mqa_struct *mqa_s) {
   // printf("reading audio\n");
   get_samples_data *gs_var = &mqa_s->get_samples_var;
