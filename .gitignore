@@ -3,4 +3,6 @@ shm_server
 *.o
 /.cache
 /mqa-files/.cache/
+/mqa-files/x86_64
+/mqa-files/arm
 qemu*.core

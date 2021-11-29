@@ -132,7 +132,7 @@ static size_t write_samples(void *p, void *buf, size_t len) {
     // since it's not tied to out_areas like it was when we were
     // folding twice.
 
-    memcpy(ipc_com->output_buffer, buf, len);
+    memcpy(ipc_com->output_buffer, buf, len * 8);
   }
 
   // For some reason, we always have to do this.
