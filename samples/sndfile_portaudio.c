@@ -1,19 +1,27 @@
 #include "../libbluos_ssc_ipc.h"
 #include "ipc_structs.h"
 #include "mqa-files/mqascan.h"
+#include <portaudio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
-int main(int argc, char **argv) {
-  // lol help
+// code partially stolen from
+// https://github.com/hosackm/wavplayer/blob/master/src/wavplay.c
 
-  ipc_mqa_struct *handle;
+static int portaudio_callback(const void *input, void *output,
+                              ulong frame_count,
+                              const PaStreamCallbackTimeInfo *time_info,
+                              PaStreamCallbackFlags status_flags,
+                              void *user_data);
+static ipc_mqa_struct *handle;
+static SNDFILE *in_file;
+
+int main(int argc, char **argv) {
   mqa_sample_rates rates;
   int num_folds;
-  SNDFILE *in_file;
-  SNDFILE *out_file;
   SF_INFO in_file_info;
-  SF_INFO out_file_info;
+  PaStream *stream;
 
   memset(&in_file_info, 0, sizeof(in_file_info));
   in_file = sf_open(argv[1], SFM_READ, &in_file_info);
@@ -26,39 +34,73 @@ int main(int argc, char **argv) {
   num_folds = (rates.original_rate / rates.compressed_rate) / 2;
   printf("initialising decoder with %d folds\n", num_folds);
 
-  // Set up outfile
-  out_file_info.samplerate = rates.original_rate; // infmt.samplerate << rs;
-  out_file_info.channels = in_file_info.channels;
-  out_file_info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_24;
-  out_file = sf_open(argv[2], SFM_WRITE, &out_file_info);
-  if (!out_file) {
-    // printf("sf_open (out) failed!\n");
-    return 1;
-  }
-
   // TODO convert rates into number of folds
   handle = bluos_ssc_ipc_init(in_file_info, num_folds);
 
-  out_file_info.samplerate = rates.original_rate; // infmt.samplerate << rs;
-  out_file_info.channels = in_file_info.channels;
-  out_file_info.format = SF_FORMAT_WAV | SF_FORMAT_PCM_24;
+  // PASTART
+  int error = Pa_Initialize();
+  if (error != paNoError) {
+    printf("Pa_Initialise failed!\n");
+    return 1;
+  }
+  error = Pa_OpenDefaultStream(
+      &stream, 0, in_file_info.channels, paInt32, rates.original_rate,
+      BUF_SIZE * handle->number_of_folds, portaudio_callback, NULL);
+  if (error != paNoError) {
+    printf("Pa_OpenDefaultStream failed!\n");
+    return 1;
+  }
 
-  while (handle->turn != FINISHED) {
-    switch (handle->turn) {
-    case AMDREAD:
-      // read;
-      bluos_ssc_sndfile_read_samples_shm(handle, in_file);
-      goto handoff_point;
-    case AMDWRITE:
-      // write
-      sf_writef_int(out_file, handle->output_buffer,
-                    handle->write_samples_var.len * num_folds);
-      goto handoff_point;
-    handoff_point:
-      bluos_ssc_ipc_handoff(handle);
-      break;
-    default:
-      continue;
+  error = Pa_StartStream(stream);
+  if (error != paNoError) {
+    printf("Pa_StartStream failed!\n");
+    return 1;
+  }
+
+  while (Pa_IsStreamActive(stream)) {
+    Pa_Sleep(100);
+  }
+
+  sf_close(in_file);
+
+  error = Pa_Terminate();
+  if (error != paNoError) {
+    printf("Pa_Terminate failed!\n");
+    return 1;
+  }
+  // PAEND
+  return 0;
+}
+
+static int portaudio_callback(const void *input, void *output,
+                              ulong frame_count,
+                              const PaStreamCallbackTimeInfo *time_info,
+                              PaStreamCallbackFlags status_flags,
+                              void *user_data) {
+
+  int *out = (int *)output;
+
+  if (handle->turn != FINISHED) {
+    while (true) {
+      switch (handle->turn) {
+      case AMDREAD:
+        // read;
+        bluos_ssc_sndfile_read_samples_shm(handle, in_file);
+        bluos_ssc_ipc_handoff(handle);
+        break;
+      case AMDWRITE:
+        // write
+        memcpy(out, handle->output_buffer,
+               sizeof(int) * handle->write_samples_var.len *
+                   handle->audio_info.channels * handle->number_of_folds);
+        bluos_ssc_ipc_handoff(handle);
+        // we're done with this execution of the function
+        return paContinue;
+      default:
+        continue;
+      }
     }
+  } else {
+    return paComplete;
   }
 }

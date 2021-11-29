@@ -80,8 +80,6 @@ ipc_mqa_struct *bluos_ssc_ipc_init(SF_INFO in_file_info,
   // We block until the decoder has put the initial details required into the
   // shared_mqa_struct, and then return the handle.
   while (shared_mqa_struct->turn != AMDREAD) {
-    printf("turn value %d\n", shared_mqa_struct->turn);
-    printf("frame value %d\n", shared_mqa_struct->get_samples_var.frame_size);
   }
 
   // TODO fork mqaplay_ipc here using a config file
