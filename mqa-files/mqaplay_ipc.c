@@ -219,9 +219,9 @@ int main(int argc, char **argv) {
 
   // END MQA RENDER SETUP
 
-  bluos_api =
-      ssc_decode_open(&sscd, channels, rate1, bits, 96000, get_samples, consume,
-                      write_samples, write_size, &outfile, options);
+  bluos_api = ssc_decode_open(
+      &sscd, channels, rate1, bits, ipc_com->audio_info.samplerate * 2,
+      get_samples, consume, write_samples, write_size, &outfile, options);
 
   if (bluos_api < 0)
     return 1;
