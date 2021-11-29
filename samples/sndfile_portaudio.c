@@ -32,6 +32,11 @@ int main(int argc, char **argv) {
   // Begin the decoder
   rates = bluos_ssc_sndfile_mqa_rate_info(in_file, &in_file_info);
   num_folds = (rates.original_rate / rates.compressed_rate) / 2;
+  if (num_folds > 2) {
+    printf("warning! libbluos_ssc_ipc.so only supports a maximum of two MQA "
+           "folds. setting fold count to 2.\n");
+    num_folds = 2;
+  }
   printf("initialising decoder with %d folds\n", num_folds);
 
   // TODO convert rates into number of folds
