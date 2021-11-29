@@ -48,13 +48,14 @@ int main(int argc, char **argv) {
     case AMDREAD:
       // read;
       bluos_ssc_sndfile_read_samples_shm(handle, in_file);
-      handle->turn = ARMPROCESS;
-      break;
+      goto handoff_point;
     case AMDWRITE:
       // write
       sf_writef_int(out_file, handle->output_buffer,
                     handle->write_samples_var.len * num_folds);
-      handle->turn = ARMPROCESS;
+      goto handoff_point;
+    handoff_point:
+      bluos_ssc_ipc_handoff(handle);
       break;
     default:
       continue;
