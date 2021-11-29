@@ -305,8 +305,7 @@ uint64_t print_fields(struct bitreader *b, const struct bitfield *bf,
 
     if (bf->flags & BF_RET) {
       if (out)
-        printf("copying %llu to out\t", v);
-      *out++ = v;
+        *out++ = v;
       ret = v;
     }
 

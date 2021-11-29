@@ -33,9 +33,8 @@
 #include <sys/shm.h>
 #include <unistd.h>
 
+#include "../ipc_structs.h" // BUF_SIZE is defined here
 #include "bluos_ssc.h"
-
-#define BUF_SIZE 4096
 
 static int bluos_api;
 static SNDFILE *outfile;
@@ -47,27 +46,6 @@ static bool in_areas_initialised = false;
 static snd_pcm_channel_area_t out_areas[2];
 static int channels;
 static int ratio;
-
-typedef enum { AMDREAD, AMDWRITE, ARMPROCESS, FINISHED } LIB;
-typedef enum { READ, WRITE } ACTION;
-typedef struct {
-  int buf_pos;
-  int buf_end;
-  int frame_size;
-  int size;
-} get_samples_data;
-typedef struct {
-  int len;
-} write_samples_data;
-
-typedef struct {
-  uint8_t input_buffer[BUF_SIZE];
-  int32_t output_buffer[BUF_SIZE * 4];
-  get_samples_data get_samples_var;
-  write_samples_data write_samples_var;
-  LIB turn;
-  SF_INFO audio_info;
-} ipc_mqa_struct;
 
 static ipc_mqa_struct *ipc_com;
 
@@ -89,9 +67,10 @@ static int get_samples(int frame_size, uint8_t **samples, int eof, int *end) {
   ipc_com->turn = AMDREAD; // hand the execution off to the AMD lib
 
   printf("rescinding control to AMDlib\n");
+  printf("ipc_com->turn %d\n", ipc_com->turn);
   // Wait for other process to hand-off to ARM decoder environment
   while (ipc_com->turn != ARMPROCESS) {
-    printf("turn %d\n", ipc_com->turn);
+    // printf("turn %d\n", ipc_com->turn);
   }
 
   printf("received control at get_samples\n");
@@ -119,40 +98,57 @@ static void consume(int len) {
 }
 
 static size_t write_samples(void *p, void *buf, size_t len) {
-  // s will be used as the mqa render inbuf
   int32_t *s = buf;
-  size_t ret;
+
+  // We need this variable when we bitwise shift each element
+  // in the output buffer, to know how long the output buffer
+  // really is.
+  int actual_len;
   int i;
 
   if (bluos_api < 1)
     len /= 8;
 
-  if (!in_areas_initialised) {
-    printf("initialising in_areas\n");
-    for (i = 0; i < channels; i++) {
-      in_areas[i].addr = s;
-      in_areas[i].first = i * 32;
-      in_areas[i].step = channels * 32;
+  // We're only going to perform the second fold
+  // if the client asked for it.
+  if (ipc_com->number_of_folds == 2) {
+    actual_len = len * 4;
+
+    if (!in_areas_initialised) {
+      printf("initialising in_areas\n");
+      for (i = 0; i < channels; i++) {
+        in_areas[i].addr = s;
+        in_areas[i].first = i * 32;
+        in_areas[i].step = channels * 32;
+      }
+      in_areas_initialised = true;
     }
-    in_areas_initialised = true;
+
+    ssc_render(rend, out_areas, 0, len * ratio, in_areas, 0, len, 0, channels,
+               SND_PCM_FORMAT_S24);
+  } else {
+    actual_len = len * 2;
+    // We have to manually move the buffer into the IPC struct
+    // since it's not tied to out_areas like it was when we were
+    // folding twice.
+
+    memcpy(ipc_com->output_buffer, buf, len);
   }
 
-  ssc_render(rend, out_areas, 0, len * ratio, in_areas, 0, len, 0, channels,
-             SND_PCM_FORMAT_S24);
-
-  for (i = 0; i < len * ratio * channels; i++)
+  // For some reason, we always have to do this.
+  for (i = 0; i < actual_len; i++)
     ipc_com->output_buffer[i] <<= 8;
 
-  // we are writing to the IPC mechanism instead of this
-  // ret = sf_writef_int(outfile, outbuf, len * ratio);
+  // BEGIN HAND OFF TO AMD64 EXECUTABLE
   ipc_com->write_samples_var.len = len;
   ipc_com->turn = AMDWRITE; // hand the execution off to the AMD lib
   while (ipc_com->turn != ARMPROCESS) {
     printf("write turn %d\n", ipc_com->turn);
   }
+  // END HAND OFF TO AMD64 EXECUTABLE
 
   if (bluos_api < 1) {
-    ret *= 8;
+    len *= 8;
   }
 
   // printf("ret %d\n", ret);
@@ -171,45 +167,57 @@ int main(int argc, char **argv) {
   int bits = 32;
   int options = 0;
   int mqa = 0;
+  ratio = 2;
 
-  int shmid = shmget(25589, sizeof(ipc_mqa_struct), IPC_CREAT | 0777);
+  // BEGIN IPC SETUP
+  int shmid = shmget(SHM_KEY, sizeof(ipc_mqa_struct), IPC_CREAT | 0777);
   ipc_com = shmat(shmid, NULL, 0);
+
+  printf("BEGIN IPC, folds: %d\nturn: %d\n", ipc_com->number_of_folds,
+         ipc_com->turn);
 
   rate1 = ipc_com->audio_info.samplerate;
   channels = ipc_com->audio_info.channels;
+  // END IPC SETUP
 
+  // BEGIN SSC SETUP
   if (ssc_init(lib))
     return 1;
+  // END SSC SETUP
 
-  // MQA render setup stuff
+  // BEGIN MQA RENDER (second fold) SETUP
 
-  snd_pcm_rate_info_t ri;
+  // We aren't going to bother with this fold, unless
+  // the number of folds to be done is two.
+  if (ipc_com->number_of_folds == 2) {
+    snd_pcm_rate_info_t ri;
 
-  ratio = 2;
-  int outbuf_size = BUF_SIZE * ratio;
-  // outbuf = malloc(8 * outbuf_size);
+    int outbuf_size = BUF_SIZE * ratio;
 
-  ri.channels = channels;
-  ri.in.format = SND_PCM_FORMAT_S24;
-  // double fold
+    ri.channels = channels;
+    ri.in.format = SND_PCM_FORMAT_S24;
+    // double fold
 
-  // input rate is after the first fold
-  ri.in.rate = rate1 * 2;
-  ri.in.buffer_size = BUF_SIZE;
-  ri.in.period_size = BUF_SIZE;
+    // input rate is after the first fold
+    ri.in.rate = rate1 * 2;
+    ri.in.buffer_size = BUF_SIZE;
+    ri.in.period_size = BUF_SIZE;
 
-  ri.out.format = SND_PCM_FORMAT_S24;
-  // double fold so we multiply
-  ri.out.rate = rate1 * 4;
-  ri.out.buffer_size = outbuf_size;
-  ri.out.period_size = outbuf_size;
+    ri.out.format = SND_PCM_FORMAT_S24;
+    // double fold so we multiply
+    ri.out.rate = rate1 * 4;
+    ri.out.buffer_size = outbuf_size;
+    ri.out.period_size = outbuf_size;
 
-  if (ssc_render_init(&rend, &ri, 0, NULL) < 0) {
-    fprintf(stderr, "ssc_render_init failure\n");
-    return 1;
+    if (ssc_render_init(&rend, &ri, 0, NULL) < 0) {
+      fprintf(stderr, "ssc_render_init failure\n");
+      return 1;
+    }
+
+    setup_areas(out_areas, &ipc_com->output_buffer, channels, bits);
   }
 
-  setup_areas(out_areas, &ipc_com->output_buffer, channels, bits);
+  // END MQA RENDER SETUP
 
   bluos_api =
       ssc_decode_open(&sscd, channels, rate1, bits, 96000, get_samples, consume,

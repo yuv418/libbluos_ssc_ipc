@@ -29,7 +29,7 @@
 
 #include <stdint.h>
 
-extern const char *mqa_rates[32];
+extern const int mqa_rates[32];
 extern const uint8_t mqa_auth_keys[16][384];
 extern const char *mqb_bitdepths[4];
 

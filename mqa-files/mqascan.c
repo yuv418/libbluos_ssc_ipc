@@ -182,8 +182,8 @@ static const struct bitfield datasync_fields[] = {
     {36, BF_HEX, "magic"},
     {1, BF_HEX, "stream_pos_flag"},
     {1, 0, "pad"},
-    {5, BF_HEX | BF_RET, "orig_rate", mqa_rates},
-    {5, BF_HEX | BF_RET, "src_rate", mqa_rates},
+    {5, BF_HEX | BF_RET, "orig_rate"},
+    {5, BF_HEX | BF_RET, "src_rate"},
     {5, 0, "render_filter"},
     {2, 0, "unknown_1"},
     {2, 0, "render_bitdepth", mqb_bitdepths},
@@ -204,13 +204,9 @@ static int handle_datasync(struct bitreader *b, unsigned ptype) {
   int i;
 
   print_fields(b, datasync_fields, val);
-  // get val
-  for (int j = 0; j < 2; j++) {
-    printf("i %d, data %lu\n", j, val[j]);
-  }
 
-  mqa_samplerates.compressed_rate = val[1];
-  mqa_samplerates.original_rate = val[0];
+  mqa_samplerates.compressed_rate = mqa_rates[val[1]];
+  mqa_samplerates.original_rate = mqa_rates[val[0]];
 
   return 0;
 }
@@ -366,8 +362,10 @@ static void write_metadata(const char *file) {
   metadata_frags = 0;
 }
 
-static int scan_file(SNDFILE *file, SF_INFO *fmt, int start, int mqabit) {
+int scan_file(SNDFILE *file, SF_INFO *fmt) {
   int i;
+  int start = 0;
+  int mqabit = 0;
 
   abspos = 0;
   // only run one scan, since that's all we need
@@ -406,7 +404,7 @@ static int scan_file(SNDFILE *file, SF_INFO *fmt, int start, int mqabit) {
   return 0;
 }
 
-static mqa_sample_rates get_mqa_sample_rates() {
+mqa_sample_rates get_mqa_sample_rates() {
   // only run this after scan_file is complete
   return mqa_samplerates;
 }
