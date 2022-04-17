@@ -36,7 +36,7 @@
 #include "../ipc_structs.h" // BUF_SIZE is defined here
 #include "bluos_ssc.h"
 
-#if 1
+#if 0
 
 #define DEBUG(...) printf(__VA_ARGS__)
 
@@ -71,7 +71,7 @@ static void setup_areas(snd_pcm_channel_area_t *a, void *buf, int channels,
 }
 
 static int get_samples(int frame_size, uint8_t **samples, int eof, int *end) {
-  printf("begin get samples\n");
+  DEBUG("begin get samples\n");
 
   ipc_com->get_samples_var.frame_size = frame_size;
   // ipc_com->turn = AMDREAD;
@@ -79,12 +79,12 @@ static int get_samples(int frame_size, uint8_t **samples, int eof, int *end) {
   // hand the execution off to the AMD lib
   bluos_ssc_ipc_handoff(ipc_com, AMDREAD);
 
-  printf("rescinding control to AMDlib\n");
-  printf("ipc_com->turn %d\n", ipc_com->turn);
+  DEBUG("rescinding control to AMDlib\n");
+  DEBUG("ipc_com->turn %d\n", ipc_com->turn);
   // Wait for other process to hand-off to ARM decoder environment
   bluos_ssc_ipc_wait(ipc_com, ARMPROCESS);
 
-  printf("received control at get_samples\n");
+  DEBUG("received control at get_samples\n");
   if (end) {
     if (!ipc_com->get_samples_var.size) {
       *end = 1;
@@ -99,12 +99,12 @@ static int get_samples(int frame_size, uint8_t **samples, int eof, int *end) {
   if (bluos_api > 0)
     ipc_com->get_samples_var.size /= ipc_com->get_samples_var.frame_size;
 
-  printf("return size is %d\n", ipc_com->get_samples_var.size);
+  DEBUG("return size is %d\n", ipc_com->get_samples_var.size);
   return ipc_com->get_samples_var.size;
 }
 
 static void consume(int len) {
-  printf("consumed %d\n", len);
+  DEBUG("consumed %d\n", len);
   ipc_com->get_samples_var.buf_pos += len;
 }
 
@@ -126,7 +126,7 @@ static size_t write_samples(void *p, void *buf, size_t len) {
     actual_len = len * 4;
 
     if (!in_areas_initialised) {
-      printf("initialising in_areas\n");
+      DEBUG("initialising in_areas\n");
       for (i = 0; i < channels; i++) {
         in_areas[i].addr = s;
         in_areas[i].first = i * 32;
