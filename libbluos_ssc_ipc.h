@@ -20,8 +20,6 @@
 // needs more than two folds.
 ipc_mqa_struct *bluos_ssc_ipc_init(SF_INFO in_file_info,
                                    uint8_t number_of_folds);
-// Hand off execution to ARM library
-void bluos_ssc_ipc_handoff(ipc_mqa_struct *handle);
 // Helper functions for SNDFILEs
 
 // Read block from SNDFILE for processing in decoder context

@@ -64,14 +64,15 @@ static int get_samples(int frame_size, uint8_t **samples, int eof, int *end) {
   printf("begin get samples\n");
 
   ipc_com->get_samples_var.frame_size = frame_size;
-  ipc_com->turn = AMDREAD; // hand the execution off to the AMD lib
+  // ipc_com->turn = AMDREAD;
+
+  // hand the execution off to the AMD lib
+  bluos_ssc_ipc_handoff(ipc_com, AMDREAD);
 
   printf("rescinding control to AMDlib\n");
   printf("ipc_com->turn %d\n", ipc_com->turn);
   // Wait for other process to hand-off to ARM decoder environment
-  while (ipc_com->turn != ARMPROCESS) {
-    // printf("turn %d\n", ipc_com->turn);
-  }
+  bluos_ssc_ipc_wait(ipc_com, ARMPROCESS);
 
   printf("received control at get_samples\n");
   if (end) {
@@ -141,10 +142,10 @@ static size_t write_samples(void *p, void *buf, size_t len) {
 
   // BEGIN HAND OFF TO AMD64 EXECUTABLE
   ipc_com->write_samples_var.len = len;
-  ipc_com->turn = AMDWRITE; // hand the execution off to the AMD lib
-  while (ipc_com->turn != ARMPROCESS) {
-    printf("write turn %d\n", ipc_com->turn);
-  }
+  // ipc_com->turn = AMDWRITE; // hand the execution off to the AMD lib
+  bluos_ssc_ipc_handoff(ipc_com,
+                        AMDWRITE); // hand the execution off to the AMD lib
+  bluos_ssc_ipc_wait(ipc_com, ARMPROCESS);
   // END HAND OFF TO AMD64 EXECUTABLE
 
   if (bluos_api < 1) {

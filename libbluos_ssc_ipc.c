@@ -8,8 +8,10 @@
 #include <sys/shm.h>
 #include <unistd.h>
 
+#include "ipc_structs.h"
 #include "libbluos_ssc_ipc.h"
 #include "mqa-files/mqascan.h"
+#include "sync/drepper_mutex.h"
 
 // Copied from the ARM version
 // Code from Mans Rullgard:
@@ -68,10 +70,16 @@ ipc_mqa_struct *bluos_ssc_ipc_init(SF_INFO in_file_info,
               .size = 1,
           },
       .write_samples_var = {.len = 0},
+      // sync stays "uninitialised"
       .turn = ARMPROCESS,
       .audio_info = in_file_info,
       .number_of_folds = number_of_folds,
   };
+
+  drepper_init(&temp_mqa_struct.data_lock);
+  fxsem_init(&temp_mqa_struct.full);
+  fxsem_init(&temp_mqa_struct.empty);
+
   // Copy the initial struct to shared memory.
   // We will start to use the shared_mqa_struct pointer exclusively from here
   // onwards.
@@ -79,17 +87,13 @@ ipc_mqa_struct *bluos_ssc_ipc_init(SF_INFO in_file_info,
 
   // We block until the decoder has put the initial details required into the
   // shared_mqa_struct, and then return the handle.
-  while (shared_mqa_struct->turn != AMDREAD) {
-  }
+  printf("beginning spin wait for mqa encoder process\n");
+  fxsem_down(&shared_mqa_struct->full);
 
   // TODO fork mqaplay_ipc here using a config file
   // that has paths for qemu-arm-static and the binary file
 
   return shared_mqa_struct;
-}
-
-void bluos_ssc_ipc_handoff(ipc_mqa_struct *handle) {
-  handle->turn = ARMPROCESS;
 }
 
 mqa_sample_rates bluos_ssc_sndfile_mqa_rate_info(SNDFILE *in_file,

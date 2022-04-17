@@ -91,18 +91,19 @@ static int portaudio_callback(const void *input, void *output,
       case AMDREAD:
         // read;
         bluos_ssc_sndfile_read_samples_shm(handle, in_file);
-        bluos_ssc_ipc_handoff(handle);
+        bluos_ssc_ipc_handoff(handle, ARMPROCESS);
         break;
       case AMDWRITE:
         // write
         memcpy(out, handle->output_buffer,
                sizeof(int) * handle->write_samples_var.len *
                    handle->audio_info.channels * handle->number_of_folds);
-        bluos_ssc_ipc_handoff(handle);
+        bluos_ssc_ipc_handoff(handle, ARMPROCESS);
         // we're done with this execution of the function
         return paContinue;
-      default:
+      default: // In the case the ARM encoder is running, we wait.
         continue;
+        // bluos_ssc_ipc_wait(handle, AMDREAD | AMDWRITE);
       }
     }
   } else {
