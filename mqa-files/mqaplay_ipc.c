@@ -36,6 +36,16 @@
 #include "../ipc_structs.h" // BUF_SIZE is defined here
 #include "bluos_ssc.h"
 
+#if 1
+
+#define DEBUG(...) printf(__VA_ARGS__)
+
+#else
+
+#define DEBUG(...)
+
+#endif
+
 static int bluos_api;
 static SNDFILE *outfile;
 
