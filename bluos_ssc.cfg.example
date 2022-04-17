@@ -1,0 +1,6 @@
+// we must generate our own in the PKGBUILD
+armproc_details = {
+                binary_path = "path/to/mqaplay_ipc";
+                libs_path = "path/to/ld_library_libs";
+                qemu_arm_path = "/usr/bin/qemu-arm-static";
+}

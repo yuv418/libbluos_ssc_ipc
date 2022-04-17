@@ -5,4 +5,7 @@ shm_server
 /mqa-files/.cache/
 /mqa-files/x86_64
 /mqa-files/arm
+/mqa-files/build
+build/
 qemu*.core
+bluos_ssc.cfg
