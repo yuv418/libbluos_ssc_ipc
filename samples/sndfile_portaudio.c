@@ -101,7 +101,8 @@ static int portaudio_callback(const void *input, void *output,
         bluos_ssc_ipc_handoff(handle, ARMPROCESS);
         // we're done with this execution of the function
         return paContinue;
-      default: // In the case the ARM encoder is running, we wait.
+      default: // In the case the ARM encoder is running, we just continue,
+               // since if we wait here then portaudio doesn't play anything
         continue;
         // bluos_ssc_ipc_wait(handle, AMDREAD | AMDWRITE);
       }

@@ -29,8 +29,7 @@ void fxsem_down(fxsem_t *sem) {
   // binary semaphore means that we check if sem_val is 1, and if it is we
   // change it zero. Othewrise we sleep. TODO how do we write a fully-functional
   // semaphore using one instruction?
-  int tmp_sem_val;
-  while ((tmp_sem_val = cmpxchg(&sem->sem_val, 1, 0)) == 0) {
+  while (cmpxchg(&sem->sem_val, 1, 0) == 0) {
     futex_wait(&sem->sem_val, 0);
   }
 }
