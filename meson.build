@@ -16,7 +16,13 @@ mqa_keys       =  static_library('mqa-keys', 'mqa-files/mqa-keys.c')
 sfbits         =  static_library('sfbits', 'mqa-files/sfbits.c', dependencies: sndfile, link_with: bits)
 mqascan        =  static_library('mqascan', 'mqa-files/mqascan.c', dependencies: [gmp, sndfile], link_with: [bits, mqa_common, blake2s_ref, mqa_keys, sfbits])
 
-bluos_ssc_ipc =  library('bluos_ssc_ipc', 'libbluos_ssc_ipc.c', dependencies: [sndfile, libconfig], link_with: [mqascan, ipc_structs])
+bluos_ssc_ipc  =  shared_library('bluos_ssc_ipc', 'libbluos_ssc_ipc.c', dependencies: [sndfile, libconfig], link_with: [mqascan, ipc_structs], install: true)
 
-executable('sndfile_portaudio', 'samples/sndfile_portaudio.c', dependencies: [sndfile, portaudio], link_with: [bluos_ssc_ipc, ipc_structs] )
+executable('sndfile_portaudio', 'samples/sndfile_portaudio.c', dependencies: [sndfile, portaudio], link_with: [bluos_ssc_ipc, ipc_structs], install: true)
 
+
+# Install stuff
+
+install_subdir('build/arm-bundle', install_dir: '/opt/bluos_ssc_ipc')
+install_data('packaging/bluos_ssc.cfg', install_dir: '/etc')
+install_headers('libbluos_ssc_ipc.h', subdir: 'libbluos_ssc_ipc')

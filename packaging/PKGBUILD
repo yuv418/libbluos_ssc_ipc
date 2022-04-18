@@ -1,0 +1,48 @@
+# This is an example PKGBUILD file. Use this as a start to creating your own,
+# and remove these comments. For more information, see 'man PKGBUILD'.
+# NOTE: Please fill out the license field for your package! If it is unknown,
+# then please put 'unknown'.
+
+# Maintainer: xe <icqw1@protonmail.com>
+pkgname=libbluos_ssc_ipc
+pkgver=0.1.0
+pkgrel=0
+epoch=
+pkgdesc="Library to decode MQA files"
+arch=(x86_64)
+url=""
+license=('GPLv3')
+groups=()
+depends=(qemu-user-static)
+makedepends=(arch-install-scripts meson ninja libsndfile portaudio ccache)
+checkdepends=()
+optdepends=()
+provides=()
+conflicts=()
+replaces=()
+backup=()
+options=()
+install=
+changelog=
+source=("$pkgname-$pkgver.tar.gz::git+https://git.sr.ht/~xe/libbluos_ssc_ipc"
+        "libbluos_ssc.so::local://libbluos_ssc.so")
+noextract=()
+validpgpkeys=()
+
+prepare() {
+	cd "$pkgname-$pkgver"
+}
+
+build() {
+	cd "$pkgname-$pkgver"
+    sudo ./bundle_arm.sh
+    meson build
+    cd build
+    ninja
+}
+
+package() {
+	cd "$pkgname-$pkgver/build"
+	DESTDIR="$pkgdir/" meson install
+
+}

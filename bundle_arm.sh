@@ -5,6 +5,7 @@
 COMPILE_DIR=`mktemp -d`
 FULL_PATH_TO_SCRIPT="$(dirname $(realpath "${BASH_SOURCE[-1]}"))" # thanks stackoverflow
 
+echo starting arm intsall
 
 cd $COMPILE_DIR
 
@@ -26,7 +27,7 @@ mkdir chroot_root/bluos_ssc
 mount --bind ${FULL_PATH_TO_SCRIPT} chroot_root/bluos_ssc
 
 # there's probably a better way to do this.
-arch-chroot chroot_root bash -c 'cd bluos_ssc/mqa-files && meson build --buildtype=release && cd build && ninja'
+arch-chroot chroot_root bash -c 'cd bluos_ssc/mqa-files && ls && meson build && ls && cd build && ls && ninja'
 
 umount chroot_root/bluos_ssc # if we don't do this we obliterate the source code
 rmdir chroot_root/bluos_ssc
@@ -45,6 +46,9 @@ cp libasound.so.2 libc.so.6 libdl.so.2 libFLAC.so.8 libgcc_s.so.1 libm.so.6 libo
     ${FULL_PATH_TO_SCRIPT}/build/arm-bundle/ld_library_libs
 
 cd ${FULL_PATH_TO_SCRIPT}
+ls
+# what else am I supposed to do here?
+chmod -R 777 *
 # rm -rf $COMPILE_DIR # let's be careful here, okay?
 
 
