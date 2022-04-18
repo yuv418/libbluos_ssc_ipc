@@ -24,5 +24,6 @@ executable('sndfile_portaudio', 'samples/sndfile_portaudio.c', dependencies: [sn
 # Install stuff
 
 install_subdir('build/arm-bundle', install_dir: '/opt/bluos_ssc_ipc')
+install_data('build/arm-bundle/libs/ld-linux-armhf.so.3', install_dir: '/lib')
 install_data('packaging/bluos_ssc.cfg', install_dir: '/etc')
 install_headers('libbluos_ssc_ipc.h', subdir: 'libbluos_ssc_ipc')
