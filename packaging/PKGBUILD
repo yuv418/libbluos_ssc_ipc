@@ -24,7 +24,7 @@ backup=()
 options=()
 install=
 changelog=
-source=("$pkgname-$pkgver.tar.gz::git+https://git.sr.ht/~xe/libbluos_ssc_ipc"
+source=("$pkgname-$pkgver::git+https://git.sr.ht/~xe/libbluos_ssc_ipc"
         "libbluos_ssc.so::local://libbluos_ssc.so")
 noextract=()
 validpgpkeys=()
