@@ -8,4 +8,4 @@ shm_server
 /mqa-files/build
 build/
 qemu*.core
-bluos_ssc.cfg
+/bluos_ssc.cfg
