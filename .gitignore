@@ -9,3 +9,4 @@ shm_server
 build/
 qemu*.core
 /bluos_ssc.cfg
+/mqa-files/mqa-keys.c
